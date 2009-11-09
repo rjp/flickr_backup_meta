@@ -1,0 +1,132 @@
+<!doctype html>
+<html manifest="StickyNotes.manifest">
+<head>
+<title>WebKit HTML 5 SQL Flickr Work In Progress</title>
+  <!-- 
+
+    CREATE TABLE photo (
+        id char(12) primary key, 
+        upload timestamp, 
+        got_exif timestamp, 
+        title varchar(1024), 
+        taken timestamp, 
+        last_update timestamp, 
+        ispublic int, 
+        isfriend int, 
+        isfamily int, 
+        latitude double, 
+        longitude double, 
+        media varchar(16), 
+        tags varchar(1024), 
+        views int);
+  
+  -->
+  <style>
+    body {
+        font-family: 'Helvetica', 
+        sans-serif;
+    }
+  
+  </style>
+  <script>
+    var db;
+    
+    try {
+        if (window.openDatabase) {
+            db = openDatabase("NoteTest", "1.0", "HTML5 Database API example", 200000);
+            if (!db)
+                alert("Failed to open the database on disk.  This is probably because the version was bad or there is not enough space left in this domain's quota");
+            } else {
+                alert("Couldn't open the database.  Please try with a WebKit nightly with this feature enabled");
+            }
+    } catch(err) { }
+    
+    function parse_date(date) {
+        daylist = date.split('T')[0].split('-');
+        timelist = date.split('T')[1].split('+')[0].split(':');
+        
+        return new Date(Date.UTC(daylist[0], daylist[1]-1, daylist[2], timelist[0], timelist[1], timelist[2]));
+    }
+    
+    function analyse_data() {
+        db.transaction(function(tx) {
+            tx.executeSql("SELECT min(upload) as start FROM photo", [], function(tx, result) {
+                if (!result.rows.length) {
+                    window.alert("No result (that's odd...)");
+                    return;
+                }
+                startDate = parse_date(result.rows.item(0)['start']);
+                
+                // $('div#write').append("The first was uploaded at "+startDate+" ("+(startDate.getTime()/1000)+")");
+                
+                var epoch = startDate.getTime()/1000;
+                var nextEpoch = epoch+60*60*24*365.25;
+                
+                var scaling = 0.38;
+                
+                while (nextEpoch < parseInt(new Date().getTime()/1000)) {
+                    sql1 = "SELECT count(1) as count, "+epoch+" as epoch FROM photo WHERE upload > datetime("+epoch+", 'unixepoch') AND upload <= datetime("+nextEpoch+", 'unixepoch')";
+                    tx.executeSql(sql1, [], function(tx, result){
+                        start = new Date(result.rows.item(0)['epoch']*1000);
+                        startYear = start.getYear()+1900;
+                        width = result.rows.item(0)['count']*scaling;
+                        $('div#write').append("<div style='width:"+width+"px; background-color: rgb(246, 233, 248); border: 1px solid rgb(234, 204, 238); float:left;'><span style='display: inline; height: 0px; position: relative; width: 0px; z-index: 10;'>November "+startYear+"<"+"/span><"+"/div><div style='border:1px solid white; position:absolute; left:470px; font-weight:bold;'>"+result.rows.item(0)['count']+"<"+"/div><br style='clear:both;'>");
+                    });
+                    
+                    // sql = "SELECT count(1) as count, "+epoch+" as epoch FROM photo WHERE upload > datetime("+epoch+", 'unixepoch') AND upload <= datetime("+nextEpoch+", 'unixepoch')";
+                    sql2 = "SELECT count(1) as count, tag.value as model from photo, tag where photo.id=tag.id and tag.namespace='camera' and tag.predicate='model' and photo.upload > datetime("+epoch+", 'unixepoch') AND photo.upload <= datetime("+nextEpoch+", 'unixepoch') group by tag.tag order by count desc";
+                    tx.executeSql(sql2, [], function(tx, result){
+                        // for (var i = 0; i < result.rows.length; ++i) {
+                        max = result.rows.length;
+                        if (max > 5)
+                            max = 5;
+                        for (var i = 0; i < max; ++i) {
+                            var row = result.rows.item(i);
+                            
+                            count = row['count']
+                            model = row['model']
+                            width = count*scaling;
+                            
+                            $('div#write').append("<div style='width:"+width+"px; border:1px solid rgb(204, 224, 238); background:rgb(233, 242, 248); float:left;'><span style='display: inline; height: 0px; position: relative; width: 0px; z-index: 10;'>"+row['model']+"<"+"/span><"+"/div><div style='border:1px solid white; position:absolute; left:470px;'>"+row['count']+"<"+"/div><br style='clear:both;'>");
+                            
+                            // $('div#write').append("<dd><b>"+row['count']+"<"+"/b> "+row['model']+"<"+"/dd>");
+                        }
+                    });
+                    
+                    epoch = nextEpoch;
+                    nextEpoch = epoch+60*60*24*365.25;
+                }
+            }, 
+        function (tx, error) {
+                window.alert('error: '+error);
+            });
+        });
+    }
+    
+    function loaded() {
+        db.transaction(function(tx) {
+            tx.executeSql("SELECT COUNT(*) as count FROM photo", [], function(tx, result) {
+                if (!result.rows.length) {
+                    window.alert("No result (that's odd...)");
+                    return;
+                }
+                $('div#write').append("<p>There are "+result.rows.item(0)['count']+" public photos.</p>");
+                
+                analyse_data();
+            }, 
+            function(tx, error) {
+                window.alert('error: '+error);
+            });
+        });
+    }
+    
+    addEventListener('load', loaded, false);
+  </script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" defer="true"></script>
+
+</head>
+<body>
+<h1>Flickr photo data</h1>
+<div id="write"></div>
+</body>
+</html>
