@@ -107,7 +107,7 @@ pending_exif.each do |id|
             # I like my Aperture to be f/x.y or f/x so clean this up
             if t == 'Aperture' then
                 v = clean.gsub('f/','').to_f
-                nc = sprintf((v > 9 ? 'f/%d' : 'f/%.1f'), v)
+                nc = sprintf((v >= 10 ? 'f/%d' : 'f/%.1f'), v)
             end
             insertexif.execute(id, t, clean, raw, nc)
         end
