@@ -21,3 +21,6 @@ select count(1) as count, a.raw as model from exif a where a.tag='Model' group b
 select id, views, upload, taken from photo order by views desc limit 25; 
 # fastest views - this is going to be biased towards new things
 select id, views, views*60*60*24/(strftime('%s', 'now')-strftime('%s', upload)) as speed from photo order by speed desc limit 25;
+
+# which photos have tags or exif, NULL=absent
+select p.id, nullif(exists (select id from tag where id=p.id limit 1), 0) as has_tags, nullif(exists (select id from exif where id=p.id limit 1), 0) as has_exif from photo p; 
