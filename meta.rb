@@ -20,10 +20,9 @@ pagesize = 500
 
 # TODO add either table or columns to allow insertion of photo thumbnail
 #   ie secret, farm, server 
-# CREATE TABLE photo (id char(12) primary key, upload timestamp, got_exif timestamp, title varchar(1024), taken timestamp, last_update timestamp, ispublic int, isfriend int, isfamily int, latitude double, longitude double, media varchar(16), tags varchar(1024), views int);
-# CREATE TABLE tag (id char(12), tag varchar(1024), namespace raw varchar(1024), predicate varchar(1024), value varchar(1024), primary key(id, tag));
-# CREATE TABLE exif (id char(12), tag varchar(1024), value varchar(1024), raw varchar(1024), clean varchar(1024), primary key(id, tag));
-
+$data.readlines.each do |sql|
+    $dbh.do(sql)
+end
 last_photo = $dbh.select_one('select max(upload) from photo')
 last_upload = last_photo[0].nil? ? 0 : Time.parse(last_photo[0]).to_i
 
@@ -145,3 +144,9 @@ $dbh.transaction do
         end
     end
 end
+
+__END__
+CREATE TABLE IF NOT EXISTS photo (id char(12) primary key, upload timestamp, got_exif timestamp, title varchar(1024), taken timestamp, last_update timestamp, ispublic int, isfriend int, isfamily int, latitude double, longitude double, media varchar(16), tags varchar(1024), views int);
+CREATE TABLE IF NOT EXISTS tag (id char(12), tag varchar(1024), namespace raw varchar(1024), predicate varchar(1024), value varchar(1024), primary key(id, tag));
+CREATE TABLE IF NOT EXISTS exif (id char(12), tag varchar(1024), value varchar(1024), raw varchar(1024), clean varchar(1024), primary key(id, tag));
+
