@@ -126,12 +126,11 @@ end
 #### bust open tags into the tag table 
 # doesn't use Flickr, but we could if we wanted/needed raw not normalised
 
-pending_tag = $dbh.select_all('select id from photo where (select count(id) from tag) = 0')
+pending_tag = $dbh.select_all('select photo.id, photo.tags from photo left join tag on photo.id=tag.id where tag.id is null')
 
 $dbh.transaction do
-    pending_tag.each do |id|
-        tags = $dbh.select_one('select tags from photo where id=?', id)
-        taglist = tags[0].split(' ');
+    pending_tag.each do |id, tags|
+        taglist = tags.split(' ');
        
         taglist.each do |tag|
             m = tag.match('(\w+):(\w+)=(.+)')
