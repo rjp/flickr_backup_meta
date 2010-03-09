@@ -84,44 +84,44 @@ end
 
 #### find some photos that don't have their exif
 
-# pending_exif = $dbh.select_all('select id from queue where got_exif is null')
-# 
-# j=0
-# pending_exif.each do |id|
-#     exiftags = flickr.photos.getExif(:photo_id => id)
-# 
-#     cached = Hash.new { |h,k| h[k]=Array.new }
-# 
-#     # EXIF can have multiple values for the same tag name
-#     exiftags.exif.each do |tag|
-#         clean = tag.respond_to?('clean') ? tag.clean : nil
-#         cached[tag.label].push [tag.raw, clean]
-#     end
-# 
-#     $dbh.transaction do
-#         # clean up the EXIF as best we can
-#         cached.keys.each do |t|
-#             raw = cached[t].map{|i|i[0]}.compact.uniq.join(';;')
-#             clean = cached[t].map{|i|i[1]}.compact.uniq.join(';;')
-#             nc = clean
-# 
-#             # I like my Aperture to be f/x.y or f/x so clean this up
-#             if t == 'Aperture' then
-#                 v = clean.gsub('f/','').to_f
-#                 nc = sprintf((v > 9 ? 'f/%d' : 'f/%.1f'), v)
-#             end
-#             insertexif.execute(id, t, clean, raw, nc)
-#         end
-#         $dbh.do('update photo set got_exif=? where id=?', Time.now, id)
-#     end
-# 
-#     if j % 25 == 0 then
-#         print "."
-#         $stdout.flush
-#         sleep 2
-#     end
-#     j=j+1
-# end
+pending_exif = $dbh.select_all('select id from photo where got_exif is null')
+
+j=0
+pending_exif.each do |id|
+    exiftags = flickr.photos.getExif(:photo_id => id)
+
+    cached = Hash.new { |h,k| h[k]=Array.new }
+
+    # EXIF can have multiple values for the same tag name
+    exiftags.exif.each do |tag|
+        clean = tag.respond_to?('clean') ? tag.clean : nil
+        cached[tag.label].push [tag.raw, clean]
+    end
+
+    $dbh.transaction do
+        # clean up the EXIF as best we can
+        cached.keys.each do |t|
+            raw = cached[t].map{|i|i[0]}.compact.uniq.join(';;')
+            clean = cached[t].map{|i|i[1]}.compact.uniq.join(';;')
+            nc = clean
+
+            # I like my Aperture to be f/x.y or f/x so clean this up
+            if t == 'Aperture' then
+                v = clean.gsub('f/','').to_f
+                nc = sprintf((v > 9 ? 'f/%d' : 'f/%.1f'), v)
+            end
+            insertexif.execute(id, t, clean, raw, nc)
+        end
+        $dbh.do('update photo set got_exif=? where id=?', Time.now, id)
+    end
+
+    if j % 25 == 0 then
+        print "."
+        $stdout.flush
+        sleep 2
+    end
+    j=j+1
+end
 
 #### bust open tags into the tag table 
 # doesn't use Flickr, but we could if we wanted/needed raw not normalised
